@@ -22,11 +22,16 @@ import { useLibraryStore } from "../store/useLibraryStore";
 export default function Home() {
   const startAutoRefresh = useLibraryStore((s) => s.startAutoRefresh);
   const settings = useLibraryStore((s) => s.settings);
+  const fetchSettings = useLibraryStore((s) => s.fetchSettings);
   const [currentSlide, setCurrentSlide] = useState(0);
 
   const isPusat = settings?.activeBranch === "Pusat";
   const slideDuration = settings?.slideDuration || 25000;
   const slideCount = 4;
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
 
   useEffect(() => {
     const dispose = startAutoRefresh();

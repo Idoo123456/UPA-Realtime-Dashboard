@@ -9,14 +9,27 @@ export default function AdminConfig() {
   const navigate = useNavigate();
 
   const settings = useLibraryStore((s) => s.settings);
-  const updateSettings = useLibraryStore((s) => s.updateSettings);
+  const fetchSettings = useLibraryStore((s) => s.fetchSettings);
+  const saveSettings = useLibraryStore((s) => s.saveSettings);
 
   const [activeBranch, setActiveBranch] = useState<Settings["activeBranch"]>(settings.activeBranch);
   const [slideDuration, setSlideDuration] = useState(settings.slideDuration / 1000);
   const [showPopups, setShowPopups] = useState(settings.showPopups);
   const [logoPreview, setLogoPreview] = useState<string | null>(settings.logoUrl);
+  const [isSaving, setIsSaving] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
+
+  useEffect(() => {
+    setActiveBranch(settings.activeBranch);
+    setSlideDuration(settings.slideDuration / 1000);
+    setShowPopups(settings.showPopups);
+    setLogoPreview(settings.logoUrl);
+  }, [settings]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -24,14 +37,16 @@ export default function AdminConfig() {
     }
   }, [isAuthenticated, navigate]);
 
-  const handleSave = () => {
-    updateSettings({
+  const handleSave = async () => {
+    setIsSaving(true);
+    await saveSettings({
       activeBranch,
       slideDuration: slideDuration * 1000,
       showPopups,
       logoUrl: logoPreview,
     });
-    alert("Pengaturan berhasil disimpan!");
+    setIsSaving(false);
+    alert("Pengaturan berhasil disinkronkan ke server lokal!");
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -174,9 +189,10 @@ export default function AdminConfig() {
         <div className="px-6 py-4 bg-gray-50 border-t flex justify-end">
           <button
             onClick={handleSave}
-            className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg shadow transition-colors"
+            disabled={isSaving}
+            className={`px-6 py-2 ${isSaving ? 'bg-gray-400' : 'bg-green-600 hover:bg-green-700'} text-white font-semibold rounded-lg shadow transition-colors`}
           >
-            Simpan Pengaturan
+            {isSaving ? "Menyimpan..." : "Simpan Pengaturan"}
           </button>
         </div>
       </div>

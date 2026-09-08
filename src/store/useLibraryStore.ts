@@ -185,203 +185,226 @@ interface LibraryStore {
   settings: Settings;
   lastUpdateDisplay: string;
   updateSettings: (newSettings: Partial<Settings>) => void;
+  fetchSettings: () => Promise<void>;
+  saveSettings: (newSettings: Settings) => Promise<void>;
   refreshTimestamp: () => void;
   startAutoRefresh: () => () => void;
   resetToSnapshot: () => void;
 }
 
 export const useLibraryStore = create<LibraryStore>()(
-  persist(
-    (set, get) => ({
-      stats: { ...INITIAL_STATS },
-      settings: {
-        activeBranch: "Pusat",
-        slideDuration: 25000,
-        logoUrl: null,
-        showPopups: false,
-      },
-      lastUpdateDisplay:
-        new Date().toLocaleTimeString("id-ID", {
+  (set, get) => ({
+    stats: { ...INITIAL_STATS },
+    settings: {
+      activeBranch: "Pusat",
+      slideDuration: 25000,
+      logoUrl: null,
+      showPopups: false,
+    },
+    lastUpdateDisplay:
+      new Date().toLocaleTimeString("id-ID", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        timeZone: "Asia/Jakarta",
+      }) + " WIB",
+
+    updateSettings: (newSettings) => set((state) => ({ settings: { ...state.settings, ...newSettings } })),
+
+    fetchSettings: async () => {
+      try {
+        const res = await fetch('/api/settings');
+        if (res.ok) {
+          const data = await res.json();
+          if (Object.keys(data).length > 0) {
+            set({ settings: { ...get().settings, ...data } });
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch settings', e);
+      }
+    },
+
+    saveSettings: async (newSettings) => {
+      set({ settings: newSettings });
+      try {
+        await fetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newSettings),
+        });
+      } catch (e) {
+        console.error('Failed to save settings', e);
+      }
+    },
+
+    refreshTimestamp: () => {
+      const ts = new Date();
+      const timeStr =
+        ts.toLocaleTimeString("id-ID", {
           hour: "2-digit",
           minute: "2-digit",
           second: "2-digit",
           timeZone: "Asia/Jakarta",
-        }) + " WIB",
+        }) + " WIB";
 
-      updateSettings: (newSettings) => set((state) => ({ settings: { ...state.settings, ...newSettings } })),
+      set((state) => {
+        const s = { ...state.stats };
 
-      refreshTimestamp: () => {
-        const ts = new Date();
-        const timeStr =
-          ts.toLocaleTimeString("id-ID", {
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-            timeZone: "Asia/Jakarta",
-          }) + " WIB";
+        const currentHour = ts.getHours();
+        let hourIdx = currentHour - 8;
+        if (hourIdx < 0) hourIdx = 0;
+        if (hourIdx > 8) hourIdx = 8;
 
-        set((state) => {
-          const s = { ...state.stats };
+        if (Math.random() < 0.65) {
+          const randDoor = Math.random();
+          let dMain = 0;
+          let dCirc = 0;
+          let dThesis = 0;
 
-          const currentHour = ts.getHours();
-          let hourIdx = currentHour - 8;
-          if (hourIdx < 0) hourIdx = 0;
-          if (hourIdx > 8) hourIdx = 8;
+          if (randDoor < 0.3) dMain = 1;
+          else if (randDoor < 0.8) dCirc = Math.floor(Math.random() * 2) + 1;
+          else dThesis = 1;
 
-          if (Math.random() < 0.65) {
-            const randDoor = Math.random();
-            let dMain = 0;
-            let dCirc = 0;
-            let dThesis = 0;
+          s.visit_main_door += dMain;
+          s.visit_circulation_room += dCirc;
+          s.visit_thesis_room += dThesis;
+          s.total_visitors_today =
+            s.visit_main_door + s.visit_circulation_room + s.visit_thesis_room;
 
-            if (randDoor < 0.3) dMain = 1;
-            else if (randDoor < 0.8) dCirc = Math.floor(Math.random() * 2) + 1;
-            else dThesis = 1;
+          const totalAdd = dMain + dCirc + dThesis;
+          const mRand = Math.random();
+          if (mRand < 0.7) {
+            s.member_visitors += totalAdd;
+          } else if (mRand < 0.9) {
+            s.reading_card_visitors += totalAdd;
+          } else {
+            s.general_visitors += totalAdd;
+          }
 
-            s.visit_main_door += dMain;
-            s.visit_circulation_room += dCirc;
-            s.visit_thesis_room += dThesis;
-            s.total_visitors_today =
-              s.visit_main_door + s.visit_circulation_room + s.visit_thesis_room;
+          const newHourlyVisitors = [...s.hourly_visitors];
+          newHourlyVisitors[hourIdx] = (newHourlyVisitors[hourIdx] || 0) + totalAdd;
+          s.hourly_visitors = newHourlyVisitors;
+        }
 
-            const totalAdd = dMain + dCirc + dThesis;
-            const mRand = Math.random();
-            if (mRand < 0.7) {
-              s.member_visitors += totalAdd;
-            } else if (mRand < 0.9) {
-              s.reading_card_visitors += totalAdd;
-            } else {
-              s.general_visitors += totalAdd;
+        if (Math.random() < 0.55) {
+          const tRand = Math.random();
+          if (tRand < 0.35) {
+            const add = 1;
+            s.borrowing_today += add;
+            s.total_borrowing_all += add;
+            s.books_currently_borrowed += add;
+            s.available_circulation = Math.max(0, s.available_circulation - add);
+            if (Math.random() < 0.6) s.members_currently_borrowing += 1;
+            if (s.admin_transactions[0]) s.admin_transactions[0].count += add;
+
+            const newHourlyBorrowing = [...s.hourly_borrowing];
+            newHourlyBorrowing[hourIdx] = (newHourlyBorrowing[hourIdx] || 0) + add;
+            s.hourly_borrowing = newHourlyBorrowing;
+          } else if (tRand < 0.70) {
+            const add = 1;
+            s.returning_today += add;
+            s.total_returning_all += add;
+            if (s.books_currently_borrowed > 0) s.books_currently_borrowed -= add;
+            s.available_circulation += add;
+            if (s.admin_transactions[1]) s.admin_transactions[1].count += add;
+
+            const newHourlyReturning = [...s.hourly_returning];
+            newHourlyReturning[hourIdx] = (newHourlyReturning[hourIdx] || 0) + add;
+            s.hourly_returning = newHourlyReturning;
+          } else if (tRand < 0.80) {
+            const add = 1;
+            s.validation_today += add;
+            if (s.admin_transactions[2]) s.admin_transactions[2].count += add;
+          } else if (tRand < 0.85) {
+            const add = 1;
+            s.bebas_pustaka_today += add;
+            if (s.admin_transactions[3]) s.admin_transactions[3].count += add;
+          } else if (tRand < 0.90) {
+            const add = 1;
+            s.registration_today += add;
+            if (s.admin_transactions[4]) s.admin_transactions[4].count += add;
+          } else {
+            const add = 1;
+            s.fine_payment_today += add;
+            if (s.admin_transactions[5]) s.admin_transactions[5].count += add;
+          }
+
+          s.administration_today = s.validation_today + s.bebas_pustaka_today + s.registration_today + s.fine_payment_today;
+          s.total_transactions_today =
+            s.borrowing_today + s.returning_today + s.administration_today;
+          s.availability_percent = Number(
+            ((s.available_circulation / s.total_copies) * 100).toFixed(1),
+          );
+        }
+
+        if (Math.random() < 0.15) {
+          const aRand = Math.random();
+          if (aRand < 0.4) s.skripsi_s1 += 1;
+          else if (aRand < 0.65) s.ta_d3 += 1;
+          else if (aRand < 0.85) s.tesis_s2 += 1;
+          else s.disertasi_s3 += 1;
+        }
+
+        if (Math.random() < 0.2) {
+          const classes = [
+            "Kelas 000", "Kelas 100", "Kelas 200", "Kelas 300", "Kelas 400",
+            "Kelas 500", "Kelas 600", "Kelas 700", "Kelas 800", "Kelas 900",
+          ];
+          const randomClass = classes[Math.floor(Math.random() * classes.length)];
+          const addTitle = Math.random() < 0.7 ? 1 : 2;
+          const addCopies = addTitle * (Math.floor(Math.random() * 3) + 1);
+
+          const newCollection = { ...s.collection_by_class };
+          newCollection[randomClass] = (newCollection[randomClass] || 0) + addTitle;
+          s.collection_by_class = newCollection;
+
+          s.total_book_titles += addTitle;
+          s.total_copies += addCopies;
+          s.available_circulation += addCopies;
+          s.availability_percent = Number(
+            ((s.available_circulation / s.total_copies) * 100).toFixed(1),
+          );
+        }
+
+        if (Math.random() < 0.12) {
+          const delta = Math.random() < 0.5 ? 1 : -1;
+          s.overdue_books = Math.max(50, s.overdue_books + delta);
+        }
+
+        if (s.late_books.length !== s.overdue_books) {
+          let newBooks = [...s.late_books];
+          if (newBooks.length < s.overdue_books) {
+            while (newBooks.length < s.overdue_books) {
+              newBooks.push(generateLateBook(`gen-${Date.now()}-${newBooks.length}`));
             }
-
-            const newHourlyVisitors = [...s.hourly_visitors];
-            newHourlyVisitors[hourIdx] = (newHourlyVisitors[hourIdx] || 0) + totalAdd;
-            s.hourly_visitors = newHourlyVisitors;
+          } else {
+            newBooks = newBooks.slice(0, s.overdue_books);
           }
+          s.late_books = newBooks;
+        }
 
-          if (Math.random() < 0.55) {
-            const tRand = Math.random();
-            if (tRand < 0.35) {
-              const add = 1;
-              s.borrowing_today += add;
-              s.total_borrowing_all += add;
-              s.books_currently_borrowed += add;
-              s.available_circulation = Math.max(0, s.available_circulation - add);
-              if (Math.random() < 0.6) s.members_currently_borrowing += 1;
-              if (s.admin_transactions[0]) s.admin_transactions[0].count += add;
+        s.last_updated = ts.toISOString();
+        s.system_status = "online";
 
-              const newHourlyBorrowing = [...s.hourly_borrowing];
-              newHourlyBorrowing[hourIdx] = (newHourlyBorrowing[hourIdx] || 0) + add;
-              s.hourly_borrowing = newHourlyBorrowing;
-            } else if (tRand < 0.70) {
-              const add = 1;
-              s.returning_today += add;
-              s.total_returning_all += add;
-              if (s.books_currently_borrowed > 0) s.books_currently_borrowed -= add;
-              s.available_circulation += add;
-              if (s.admin_transactions[1]) s.admin_transactions[1].count += add;
+        return {
+          lastUpdateDisplay: timeStr,
+          stats: s,
+        };
+      });
+    },
 
-              const newHourlyReturning = [...s.hourly_returning];
-              newHourlyReturning[hourIdx] = (newHourlyReturning[hourIdx] || 0) + add;
-              s.hourly_returning = newHourlyReturning;
-            } else if (tRand < 0.80) {
-              const add = 1;
-              s.validation_today += add;
-              if (s.admin_transactions[2]) s.admin_transactions[2].count += add;
-            } else if (tRand < 0.85) {
-              const add = 1;
-              s.bebas_pustaka_today += add;
-              if (s.admin_transactions[3]) s.admin_transactions[3].count += add;
-            } else if (tRand < 0.90) {
-              const add = 1;
-              s.registration_today += add;
-              if (s.admin_transactions[4]) s.admin_transactions[4].count += add;
-            } else {
-              const add = 1;
-              s.fine_payment_today += add;
-              if (s.admin_transactions[5]) s.admin_transactions[5].count += add;
-            }
+    resetToSnapshot: () => {
+      set({
+        stats: JSON.parse(JSON.stringify(INITIAL_STATS)),
+      });
+    },
 
-            s.administration_today = s.validation_today + s.bebas_pustaka_today + s.registration_today + s.fine_payment_today;
-            s.total_transactions_today =
-              s.borrowing_today + s.returning_today + s.administration_today;
-            s.availability_percent = Number(
-              ((s.available_circulation / s.total_copies) * 100).toFixed(1),
-            );
-          }
-
-          if (Math.random() < 0.15) {
-            const aRand = Math.random();
-            if (aRand < 0.4) s.skripsi_s1 += 1;
-            else if (aRand < 0.65) s.ta_d3 += 1;
-            else if (aRand < 0.85) s.tesis_s2 += 1;
-            else s.disertasi_s3 += 1;
-          }
-
-          if (Math.random() < 0.2) {
-            const classes = [
-              "Kelas 000", "Kelas 100", "Kelas 200", "Kelas 300", "Kelas 400",
-              "Kelas 500", "Kelas 600", "Kelas 700", "Kelas 800", "Kelas 900",
-            ];
-            const randomClass = classes[Math.floor(Math.random() * classes.length)];
-            const addTitle = Math.random() < 0.7 ? 1 : 2;
-            const addCopies = addTitle * (Math.floor(Math.random() * 3) + 1);
-
-            const newCollection = { ...s.collection_by_class };
-            newCollection[randomClass] = (newCollection[randomClass] || 0) + addTitle;
-            s.collection_by_class = newCollection;
-
-            s.total_book_titles += addTitle;
-            s.total_copies += addCopies;
-            s.available_circulation += addCopies;
-            s.availability_percent = Number(
-              ((s.available_circulation / s.total_copies) * 100).toFixed(1),
-            );
-          }
-
-          if (Math.random() < 0.12) {
-            const delta = Math.random() < 0.5 ? 1 : -1;
-            s.overdue_books = Math.max(50, s.overdue_books + delta);
-          }
-
-          if (s.late_books.length !== s.overdue_books) {
-            let newBooks = [...s.late_books];
-            if (newBooks.length < s.overdue_books) {
-              while (newBooks.length < s.overdue_books) {
-                newBooks.push(generateLateBook(`gen-${Date.now()}-${newBooks.length}`));
-              }
-            } else {
-              newBooks = newBooks.slice(0, s.overdue_books);
-            }
-            s.late_books = newBooks;
-          }
-
-          s.last_updated = ts.toISOString();
-          s.system_status = "online";
-
-          return {
-            lastUpdateDisplay: timeStr,
-            stats: s,
-          };
-        });
-      },
-
-      resetToSnapshot: () => {
-        set({
-          stats: JSON.parse(JSON.stringify(INITIAL_STATS)),
-        });
-      },
-
-      startAutoRefresh: () => {
-        const id = window.setInterval(() => {
-          get().refreshTimestamp();
-        }, 2500);
-        return () => window.clearInterval(id);
-      },
-    }),
-    {
-      name: 'library-settings-storage',
-      partialize: (state) => ({ settings: state.settings }),
-    }
-  )
+    startAutoRefresh: () => {
+      const id = window.setInterval(() => {
+        get().refreshTimestamp();
+      }, 2500);
+      return () => window.clearInterval(id);
+    },
+  })
 );
