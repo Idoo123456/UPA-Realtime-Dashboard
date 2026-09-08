@@ -1,15 +1,16 @@
 import { useLibraryStore } from "../store/useLibraryStore";
 import { StatusIndicator } from "./UI/StatusIndicator";
-import { RefreshCw, MonitorDot, Zap } from "lucide-react";
+import { RefreshCw, Megaphone } from "lucide-react";
 
 export function Footer() {
   const lastUpdateDisplay = useLibraryStore((s) => s.lastUpdateDisplay);
   const stats = useLibraryStore((s) => s.stats);
+  const settings = useLibraryStore((s) => s.settings);
   const online = stats.system_status === "online";
 
   return (
-    <footer className="w-full bg-white border-t-2 border-unri-green-100 px-6 py-2 flex items-center justify-between gap-4 text-xs">
-      <div className="flex items-center gap-2 px-4 py-1 rounded-full bg-gradient-to-r from-unri-green-50 to-unri-yellow-50 border border-unri-green-200">
+    <footer className="w-full bg-white border-t-2 border-unri-green-100 px-6 py-2 flex items-center justify-between gap-4 text-xs shrink-0 relative z-20">
+      <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-unri-green-50 to-unri-yellow-50 border border-unri-green-200 shadow-sm shrink-0">
         <StatusIndicator online={online} size="sm" />
         <span className="text-unri-green-700 font-extrabold text-base tracking-wider">LIVE</span>
         <span className="text-gray-300">•</span>
@@ -18,16 +19,18 @@ export function Footer() {
         </span>
       </div>
 
-      <div className="flex items-center gap-5">
-        <div className="flex items-center gap-1.5">
-          <MonitorDot className="h-3.5 w-3.5 text-unri-green-600" />
-          <span className="text-gray-500">Automatic display</span>
-          <Zap className="h-3.5 w-3.5 text-unri-yellow-500 fill-unri-yellow-400" />
-          <span className="text-gray-500">Data updates in real time</span>
+      {/* Marquee Running Text */}
+      <div className="flex-1 overflow-hidden mx-4 bg-gray-50/50 rounded-lg flex items-center gap-3 py-1.5 px-3 border border-gray-100/50">
+        <Megaphone className="w-4 h-4 text-unri-yellow-500 shrink-0" />
+        <div className="w-full overflow-hidden relative h-5">
+          <div className="absolute whitespace-nowrap animate-scroll-left flex items-center h-full text-sm font-bold text-gray-700 tracking-wide">
+            {settings?.runningText || "Selamat datang di UPA Perpustakaan Universitas Riau."}
+          </div>
         </div>
+      </div>
 
-        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-unri-green-50 border border-unri-green-200">
-          <StatusIndicator online={online} size="sm" />
+      <div className="flex items-center gap-5 shrink-0">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-unri-green-50 border border-unri-green-200 shadow-sm">
           <span className={`font-bold ${online ? "text-unri-green-700" : "text-yellow-700"}`}>
             {online ? "SYSTEM ONLINE" : "CONNECTION LOST"}
           </span>

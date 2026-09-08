@@ -12,7 +12,6 @@ export function Header() {
   return (
     <header className="w-full px-5 py-2.5 bg-white border-b-2 border-unri-green-100 shadow-sm shrink-0">
       <div className="w-full flex items-center justify-between gap-4">
-        {/* LEFT: Logo + Title */}
         <div className="flex items-center gap-3 min-w-0">
           {settings?.logoUrl ? (
             <img src={settings.logoUrl} alt="Logo" className="h-10 object-contain" />
@@ -23,6 +22,14 @@ export function Header() {
             <h1 className="text-lg md:text-xl font-extrabold text-unri-green-800 tracking-tight leading-tight whitespace-nowrap">
               PERPUSTAKAAN UNIVERSITAS RIAU
             </h1>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-[11px] font-bold text-unri-yellow-600 bg-unri-yellow-50 px-2 py-0.5 rounded-md border border-unri-yellow-100/50">
+                Layanan Buka
+              </span>
+              <span className="text-xs font-semibold text-gray-500">
+                {settings?.operationalHours || "Senin - Jumat | 08:00 - 16:00 WIB"}
+              </span>
+            </div>
           </div>
         </div>
 

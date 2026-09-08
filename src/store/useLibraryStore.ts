@@ -69,15 +69,12 @@ export type Settings = {
   slideDuration: number;
   logoUrl: string | null;
   showPopups: boolean;
+  runningText: string;
+  operationalHours: string;
+  emergencyAlert: string | null;
 };
 
 const INITIAL_STATS: any = {
-  // Kunjungan
-  visit_main_door: 1,
-  visit_circulation_room: 273,
-  visit_thesis_room: 15,
-  visit_multimedia_room: 45,
-  visit_reference_room: 82,
   total_visitors_today: 416,
 
   // Transaksi
@@ -180,26 +177,52 @@ const INITIAL_STATS: any = {
   system_status: "online",
 };
 
+export type PopupNotification = {
+  id: string;
+  message: string;
+  type: 'success' | 'info' | 'warning';
+};
+
 interface LibraryStore {
   stats: any;
   settings: Settings;
   lastUpdateDisplay: string;
+  currentPopup: PopupNotification | null;
   updateSettings: (newSettings: Partial<Settings>) => void;
   fetchSettings: () => Promise<void>;
   saveSettings: (newSettings: Settings) => Promise<void>;
   refreshTimestamp: () => void;
   startAutoRefresh: () => () => void;
   resetToSnapshot: () => void;
+  clearPopup: () => void;
+  updateStatsManually: (updates: any) => void;
 }
+
+const getSavedStats = () => {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('upa_stats');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return { ...INITIAL_STATS };
+      }
+    }
+  }
+  return { ...INITIAL_STATS };
+};
 
 export const useLibraryStore = create<LibraryStore>()(
   (set, get) => ({
-    stats: { ...INITIAL_STATS },
+    stats: getSavedStats(),
     settings: {
       activeBranch: "Pusat",
       slideDuration: 25000,
       logoUrl: null,
       showPopups: false,
+      runningText: "Selamat datang di UPA Perpustakaan Universitas Riau. Harap menjaga ketenangan dan kebersihan selama berada di ruang baca.",
+      operationalHours: "Senin - Jumat | 08:00 - 16:00 WIB",
+      emergencyAlert: null,
     },
     lastUpdateDisplay:
       new Date().toLocaleTimeString("id-ID", {
@@ -208,8 +231,20 @@ export const useLibraryStore = create<LibraryStore>()(
         second: "2-digit",
         timeZone: "Asia/Jakarta",
       }) + " WIB",
+    currentPopup: null,
 
     updateSettings: (newSettings) => set((state) => ({ settings: { ...state.settings, ...newSettings } })),
+
+    updateStatsManually: (updates) => {
+      set((state) => {
+        const newStats = {
+          ...state.stats,
+          ...updates,
+        };
+        localStorage.setItem("upa_stats", JSON.stringify(newStats));
+        return { stats: newStats };
+      });
+    },
 
     fetchSettings: async () => {
       try {
@@ -237,6 +272,8 @@ export const useLibraryStore = create<LibraryStore>()(
         console.error('Failed to save settings', e);
       }
     },
+
+    clearPopup: () => set({ currentPopup: null }),
 
     refreshTimestamp: () => {
       const ts = new Date();
@@ -386,25 +423,58 @@ export const useLibraryStore = create<LibraryStore>()(
 
         s.last_updated = ts.toISOString();
         s.system_status = "online";
+        
+        // Random Popup Logic
+        let newPopup = state.currentPopup;
+        if (state.settings.showPopups && !newPopup && Math.random() < 0.15) {
+          const popupOptions = [
+            { message: "Pengunjung baru masuk ke Ruang Sirkulasi", type: "info" },
+            { message: "1 Buku berhasil dikembalikan", type: "success" },
+            { message: "Pendaftaran anggota baru berhasil", type: "success" },
+            { message: "Buku terlambat dikembalikan (Denda tercatat)", type: "warning" },
+            { message: "Transaksi Bebas Pustaka selesai", type: "info" },
+          ];
+          const chosen = popupOptions[Math.floor(Math.random() * popupOptions.length)];
+          newPopup = { id: Date.now().toString(), message: chosen.message, type: chosen.type as any };
+        }
+
+        // Simpan ke localStorage untuk sinkronisasi cross-tab
+        localStorage.setItem("upa_stats", JSON.stringify(s));
 
         return {
           lastUpdateDisplay: timeStr,
           stats: s,
+          currentPopup: newPopup,
         };
       });
     },
 
     resetToSnapshot: () => {
+      const freshStats = JSON.parse(JSON.stringify(INITIAL_STATS));
+      localStorage.setItem("upa_stats", JSON.stringify(freshStats));
       set({
-        stats: JSON.parse(JSON.stringify(INITIAL_STATS)),
+        stats: freshStats,
       });
     },
 
     startAutoRefresh: () => {
       const id = window.setInterval(() => {
         get().refreshTimestamp();
+        get().fetchSettings();
       }, 2500);
       return () => window.clearInterval(id);
     },
   })
 );
+
+if (typeof window !== "undefined") {
+  window.addEventListener("storage", (e) => {
+    if (e.key === "upa_stats" && e.newValue) {
+      try {
+        useLibraryStore.setState({ stats: JSON.parse(e.newValue) });
+      } catch (err) {
+        console.error("Failed to parse upa_stats from localStorage", err);
+      }
+    }
+  });
+}

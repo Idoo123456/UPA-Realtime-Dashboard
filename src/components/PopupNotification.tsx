@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLibraryStore } from "../store/useLibraryStore";
+import { useAdminStore } from "../store/useAdminStore";
 import { BellRing, X } from "lucide-react";
 
 const NOTIFICATIONS = [
@@ -12,11 +13,15 @@ const NOTIFICATIONS = [
 
 export function PopupNotification() {
   const settings = useLibraryStore((s) => s.settings);
+  const isAuthenticated = useAdminStore((s) => s.isAuthenticated);
   const [currentNotif, setCurrentNotif] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(false);
 
+  // Determine if popup should be active
+  const shouldShow = settings?.showPopups && isAuthenticated;
+
   useEffect(() => {
-    if (!settings?.enablePopups) {
+    if (!shouldShow) {
       setIsVisible(false);
       return;
     }
@@ -31,12 +36,12 @@ export function PopupNotification() {
       setTimeout(() => {
         setIsVisible(false);
       }, 5000);
-    }, 20000); // Show popup every 20 seconds
+    }, 10000); // Show popup every 10 seconds
 
     return () => clearInterval(interval);
-  }, [settings?.enablePopups]);
+  }, [shouldShow]);
 
-  if (!settings?.enablePopups) return null;
+  if (!shouldShow) return null;
 
   return (
     <div 

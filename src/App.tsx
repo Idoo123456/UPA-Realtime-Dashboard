@@ -7,6 +7,7 @@ import Login from "@/pages/Login";
 import AdminConfig from "@/pages/AdminConfig";
 
 import { PopupNotification } from "@/components/PopupNotification";
+import { EmergencyAlert } from "@/components/EmergencyAlert";
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/admin" element={<AdminConfig />} />
       </Routes>
+      <EmergencyAlert />
       <PopupNotification />
     </Router>
   );
