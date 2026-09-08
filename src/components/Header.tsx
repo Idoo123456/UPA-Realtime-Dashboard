@@ -1,7 +1,7 @@
 import { useRealTimeClock } from "../hooks/useRealTimeClock";
 import { useLibraryStore } from "../store/useLibraryStore";
 import { UnriLogo } from "./UI/UnriLogo";
-import { StatusIndicator } from "./UI/StatusIndicator";
+
 import { Clock, RefreshCw } from "lucide-react";
 
 export function Header() {
@@ -18,21 +18,10 @@ export function Header() {
             <h1 className="text-lg md:text-xl font-extrabold text-unri-green-800 tracking-tight leading-tight whitespace-nowrap">
               PERPUSTAKAAN UNIVERSITAS RIAU
             </h1>
-            <p className="text-[11px] md:text-xs font-medium text-unri-green-600/80 whitespace-nowrap">
-              Real-Time Library Information System
-            </p>
           </div>
         </div>
 
-        {/* CENTER: LIVE Badge */}
-        <div className="hidden md:flex items-center gap-2 px-4 py-1 rounded-full bg-gradient-to-r from-unri-green-50 to-unri-yellow-50 border border-unri-green-200">
-          <StatusIndicator online size="sm" />
-          <span className="text-unri-green-700 font-extrabold text-base tracking-wider">LIVE</span>
-          <span className="text-gray-300">•</span>
-          <span className="text-[10px] font-bold text-unri-green-600 tracking-wider uppercase">
-            Perpustakaan Aktif
-          </span>
-        </div>
+
 
         {/* RIGHT: Date + Clock */}
         <div className="flex items-center gap-3">

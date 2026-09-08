@@ -9,12 +9,13 @@ export function Footer() {
 
   return (
     <footer className="w-full bg-white border-t-2 border-unri-green-100 px-6 py-2 flex items-center justify-between gap-4 text-xs">
-      <div className="flex items-center gap-4 text-gray-600 font-medium">
-        <span className="font-bold text-unri-green-700">
-          PERPUSTAKAAN UNIVERSITAS RIAU
+      <div className="flex items-center gap-2 px-4 py-1 rounded-full bg-gradient-to-r from-unri-green-50 to-unri-yellow-50 border border-unri-green-200">
+        <StatusIndicator online={online} size="sm" />
+        <span className="text-unri-green-700 font-extrabold text-base tracking-wider">LIVE</span>
+        <span className="text-gray-300">•</span>
+        <span className="text-[10px] font-bold text-unri-green-600 tracking-wider uppercase">
+          Perpustakaan Aktif
         </span>
-        <span className="text-gray-400">•</span>
-        <span>Real-Time Library Information System</span>
       </div>
 
       <div className="flex items-center gap-5">
