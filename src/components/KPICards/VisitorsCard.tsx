@@ -37,43 +37,63 @@ export function VisitorsCard() {
         </span>
       </div>
 
-      <div className="flex-1 p-2 flex flex-col justify-start min-h-0 overflow-hidden">
-        <div className="flex flex-col gap-1.5">
-          {rows.map((r) => {
-            const Icon = r.icon;
-            return (
-              <div key={r.label} className="stat-row">
+      <div className="flex-1 p-2 flex flex-col gap-2 min-h-0 overflow-y-auto">
+        {rows.map((r) => {
+          const Icon = r.icon;
+          const pct = stats.total_visitors_today > 0 ? (r.value / stats.total_visitors_today) * 100 : 0;
+          return (
+            <div key={r.label} className="flex flex-col bg-white border border-green-100 rounded-lg p-2 shadow-sm shrink-0">
+              <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <Icon className="h-3.5 w-3.5 text-unri-green-600 shrink-0" />
-                  <span className="text-xs font-semibold text-gray-700 truncate">
+                  <Icon className="h-4 w-4 text-unri-green-600 shrink-0" style={{ color: r.color }} />
+                  <span className="text-xs font-bold text-gray-700 truncate uppercase tracking-wide">
                     {r.label}
                   </span>
                 </div>
                 <AnimatedNumber
                   value={r.value}
-                  className="text-lg font-black text-unri-green-700 tabular-nums shrink-0 ml-1"
-                  showDelta
-                  deltaColorClass="text-unri-green-500"
+                  className="text-lg font-black tabular-nums shrink-0 ml-1"
+                  style={{ color: r.color }}
                 />
               </div>
-            );
-          })}
-        </div>
-
-        {/* Visual Graphic to fill space */}
-        <div className="mt-auto mb-1 flex-1 min-h-0 flex items-center justify-center relative py-2">
-          <div className="w-full h-full relative flex items-center justify-center">
-            <Doughnut data={chartData} options={buildDonutOptions()} />
-            <div className="donut-center flex flex-col items-center">
-              <AnimatedNumber
-                value={stats.total_visitors_today}
-                className="text-xl md:text-2xl font-black text-unri-green-700 tabular-nums leading-none"
-              />
-              <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Total</span>
+              <div className="w-full h-1.5 rounded-full overflow-hidden bg-gray-100">
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${pct}%`,
+                    backgroundColor: r.color,
+                    transition: "width 1s ease-out",
+                  }}
+                />
+              </div>
             </div>
+          );
+        })}
+
+        <div
+          className="pt-2 mt-auto"
+          style={{
+            borderTop: "1px dashed rgba(22, 163, 74, 0.2)",
+          }}
+        >
+          <div
+            className="rounded-lg px-3 py-2 flex items-center justify-between"
+            style={{
+              background:
+                "linear-gradient(135deg, rgba(22, 163, 74, 0.08) 0%, rgba(22, 163, 74, 0.02) 100%)",
+            }}
+          >
+            <p className="text-[11px] font-bold uppercase tracking-wider text-unri-green-600/80">
+              Total Pengunjung
+            </p>
+            <AnimatedNumber
+              value={stats.total_visitors_today}
+              className="text-3xl font-black text-unri-green-700 tabular-nums"
+              showDelta
+              deltaColorClass="text-unri-green-500"
+            />
           </div>
         </div>
-
       </div>
     </div>
   );

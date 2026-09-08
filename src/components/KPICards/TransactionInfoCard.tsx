@@ -43,12 +43,14 @@ export function TransactionInfoCard() {
       value: stats.books_currently_borrowed,
       icon: BookX,
       valueColor: "text-unri-green-700",
+      color: "#16a34a",
     },
     {
       label: "Member Pinjam",
       value: stats.members_currently_borrowing,
       icon: CircleUserRound,
       valueColor: "text-unri-green-700",
+      color: "#14b8a6",
     },
     {
       label: "Terlambat",
@@ -56,6 +58,7 @@ export function TransactionInfoCard() {
       icon: AlertTriangle,
       valueColor: "text-unri-red-600",
       isWarning: true,
+      color: "#ef4444",
     },
   ];
 
@@ -82,45 +85,50 @@ export function TransactionInfoCard() {
         </span>
       </div>
 
-      <div className="flex-1 p-2 overflow-hidden min-h-0 flex flex-col gap-1 justify-start">
-        {rows.map((r) => {
+      <div className="flex-1 p-2 overflow-y-auto min-h-0 flex flex-col gap-2">
+        {rows.map((r, i) => {
           const Icon = r.icon;
+          // Determine scale max based on group (first 3 vs last 3)
+          let maxVal = 1;
+          if (i < 3) {
+            maxVal = Math.max(stats.total_borrowing_all, stats.total_returning_all, stats.total_extension_all);
+          } else {
+            maxVal = Math.max(stats.books_currently_borrowed, stats.members_currently_borrowing, stats.overdue_books);
+          }
+          const pct = maxVal > 0 ? (r.value / maxVal) * 100 : 0;
+          
           return (
             <div
               key={r.label}
-              className={`stat-row ${r.isWarning ? "!bg-unri-red-50/60" : ""}`}
+              className={`flex flex-col bg-white border rounded-lg p-2 shadow-sm shrink-0 ${r.isWarning ? "border-unri-red-200 bg-red-50/30" : "border-green-100"}`}
             >
-              <div className="flex items-center gap-2 min-w-0">
-                <Icon
-                  className={`h-4 w-4 shrink-0 ${
-                    r.isWarning ? "text-unri-red-500" : "text-unri-green-600"
-                  }`}
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Icon
+                    className={`h-4 w-4 shrink-0`}
+                    style={{ color: r.color }}
+                  />
+                  <span className="text-xs font-bold text-gray-700 truncate uppercase tracking-wide">{r.label}</span>
+                </div>
+                <AnimatedNumber
+                  value={r.value}
+                  className={`text-lg font-black tabular-nums shrink-0 ml-1`}
+                  style={{ color: r.color }}
                 />
-                <span className="text-sm font-semibold text-gray-700 truncate">{r.label}</span>
               </div>
-              <AnimatedNumber
-                value={r.value}
-                className={`text-lg font-black ${r.valueColor} tabular-nums shrink-0 ml-1`}
-                showDelta
-                deltaColorClass={r.isWarning ? "text-unri-red-500" : "text-unri-green-500"}
-              />
+              <div className={`w-full h-1.5 rounded-full overflow-hidden ${r.isWarning ? "bg-red-100" : "bg-gray-100"}`}>
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${pct}%`,
+                    backgroundColor: r.color,
+                    transition: "width 1s ease-out",
+                  }}
+                />
+              </div>
             </div>
           );
         })}
-
-        {/* Visual Graphic to fill space */}
-        <div className="mt-auto mb-1 flex-1 min-h-0 flex items-center justify-center relative py-2">
-          <div className="w-full h-full relative flex items-center justify-center">
-            <Doughnut data={chartData} options={buildDonutOptions()} />
-            <div className="donut-center flex flex-col items-center">
-              <AnimatedNumber
-                value={totalTransactions}
-                className="text-xl md:text-2xl font-black text-unri-red-700 tabular-nums leading-none"
-              />
-              <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Transaksi</span>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
