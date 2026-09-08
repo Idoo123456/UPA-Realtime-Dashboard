@@ -9,6 +9,9 @@ import {
   AlertTriangle,
   RefreshCw,
 } from "lucide-react";
+import { Doughnut } from "react-chartjs-2";
+import { buildDonutOptions } from "../../utils/chartConfig";
+import type { ChartData } from "chart.js";
 
 export function TransactionInfoCard() {
   const stats = useLibraryStore((s) => s.stats);
@@ -19,18 +22,21 @@ export function TransactionInfoCard() {
       value: stats.total_borrowing_all,
       icon: ArrowUpCircle,
       valueColor: "text-unri-yellow-600",
+      color: "#eab308",
     },
     {
       label: "Total Pengembalian",
       value: stats.total_returning_all,
       icon: ArrowDownCircle,
       valueColor: "text-unri-yellow-600",
+      color: "#22c55e",
     },
     {
       label: "Total Perpanjangan",
       value: stats.total_extension_all,
       icon: RefreshCw,
       valueColor: "text-unri-yellow-600",
+      color: "#3b82f6",
     },
     {
       label: "Buku Dipinjam",
@@ -53,6 +59,19 @@ export function TransactionInfoCard() {
     },
   ];
 
+  const chartData: ChartData<"doughnut"> = {
+    labels: [rows[0].label, rows[1].label, rows[2].label],
+    datasets: [{
+      data: [rows[0].value, rows[1].value, rows[2].value],
+      backgroundColor: [rows[0].color, rows[1].color, rows[2].color],
+      borderWidth: 2,
+      borderColor: "#fff",
+      hoverOffset: 4,
+    }]
+  };
+
+  const totalTransactions = stats.total_borrowing_all + stats.total_returning_all + stats.total_extension_all;
+
   return (
     <div className="kpi-card flex flex-col animate-fade-in h-full" style={{ animationDelay: "240ms" }}>
       <div className="kpi-card-header shrink-0">
@@ -63,7 +82,7 @@ export function TransactionInfoCard() {
         </span>
       </div>
 
-      <div className="flex-1 p-2 overflow-hidden min-h-0 flex flex-col gap-1.5 justify-around">
+      <div className="flex-1 p-2 overflow-hidden min-h-0 flex flex-col gap-1 justify-start">
         {rows.map((r) => {
           const Icon = r.icon;
           return (
@@ -88,6 +107,20 @@ export function TransactionInfoCard() {
             </div>
           );
         })}
+
+        {/* Visual Graphic to fill space */}
+        <div className="mt-auto mb-1 flex-1 min-h-0 flex items-center justify-center relative py-2">
+          <div className="w-full h-full relative flex items-center justify-center">
+            <Doughnut data={chartData} options={buildDonutOptions()} />
+            <div className="donut-center flex flex-col items-center">
+              <AnimatedNumber
+                value={totalTransactions}
+                className="text-xl md:text-2xl font-black text-unri-red-700 tabular-nums leading-none"
+              />
+              <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Transaksi</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

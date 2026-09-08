@@ -47,11 +47,11 @@ export function MembershipStatsCard({ isActive = true }: { isActive?: boolean })
         </span>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-hidden flex flex-col p-1.5 gap-1.5 bg-gradient-to-br from-green-50/30 to-emerald-50/30">
-        <div className="flex flex-col gap-1.5 flex-1 min-h-0">
+      <div className="flex-1 min-h-0 overflow-hidden flex flex-col p-1 gap-1 bg-gradient-to-br from-green-50/30 to-emerald-50/30">
+        <div className="flex flex-col gap-1 flex-1 min-h-0">
           
           {/* Gender */}
-          <div className="flex flex-col min-h-0 flex-1 bg-white border border-green-100 rounded-lg p-2 shadow-sm overflow-hidden">
+          <div className="flex flex-col min-h-0 flex-1 bg-white border border-green-100 rounded-lg p-1.5 shadow-sm overflow-hidden">
             <div className="flex items-center gap-2 mb-2 shrink-0">
               <User className="h-4 w-4 text-blue-500" />
               <span className="text-xs font-bold text-gray-800 uppercase tracking-wide leading-none mt-0.5">Jenis Kelamin</span>
@@ -79,7 +79,7 @@ export function MembershipStatsCard({ isActive = true }: { isActive?: boolean })
           </div>
 
           {/* Age */}
-          <div className="flex flex-col min-h-0 flex-1 bg-white border border-green-100 rounded-lg p-2 shadow-sm overflow-hidden">
+          <div className="flex flex-col min-h-0 flex-1 bg-white border border-green-100 rounded-lg p-1.5 shadow-sm overflow-hidden">
             <div className="flex items-center gap-2 mb-2 shrink-0">
               <CalendarDays className="h-4 w-4 text-orange-500" />
               <span className="text-xs font-bold text-gray-800 uppercase tracking-wide leading-none mt-0.5">Kelompok Umur</span>
@@ -107,7 +107,7 @@ export function MembershipStatsCard({ isActive = true }: { isActive?: boolean })
           </div>
 
           {/* Faculty */}
-          <div className="flex flex-col min-h-0 flex-1 bg-white border border-green-100 rounded-lg p-2 shadow-sm overflow-hidden">
+          <div className="flex flex-col min-h-0 flex-1 bg-white border border-green-100 rounded-lg p-1.5 shadow-sm overflow-hidden">
             <div className="flex items-center gap-2 mb-2 shrink-0">
               <Building2 className="h-4 w-4 text-emerald-600" />
               <span className="text-xs font-bold text-gray-800 uppercase tracking-wide leading-none mt-0.5">Fakultas</span>
@@ -138,7 +138,7 @@ export function MembershipStatsCard({ isActive = true }: { isActive?: boolean })
           </div>
 
           {/* Program */}
-          <div className="flex flex-col min-h-0 flex-1 bg-white border border-green-100 rounded-lg p-2 shadow-sm overflow-hidden">
+          <div className="flex flex-col min-h-0 flex-1 bg-white border border-green-100 rounded-lg p-1.5 shadow-sm overflow-hidden">
             <div className="flex items-center gap-2 mb-2 shrink-0">
               <GraduationCap className="h-4 w-4 text-purple-500" />
               <span className="text-xs font-bold text-gray-800 uppercase tracking-wide leading-none mt-0.5">Program Studi</span>
