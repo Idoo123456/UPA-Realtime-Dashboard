@@ -1,6 +1,6 @@
 import { useLibraryStore } from "../../store/useLibraryStore";
 import { AlertCircle, User, BookMarked, Clock } from "lucide-react";
-import { formatNumber } from "../../utils/formatters";
+import { formatNumber, maskNimWithFaculty } from "../../utils/formatters";
 import type { LateBook } from "../../types";
 
 export function LateBooksList({ isActive = true }: { isActive?: boolean }) {
@@ -39,12 +39,9 @@ export function LateBooksList({ isActive = true }: { isActive?: boolean }) {
                 {book.memberName}
               </p>
               <p className="text-xs text-gray-500 truncate mt-0.5 font-medium">
-                NIM: {book.nim}
+                NIM: {maskNimWithFaculty(book.nim, book.faculty)}
               </p>
             </div>
-            <span className="text-xs font-bold px-2 py-0.5 bg-red-200 text-red-700 rounded-full whitespace-nowrap shrink-0">
-              {book.faculty}
-            </span>
           </div>
 
           {/* Book Title */}

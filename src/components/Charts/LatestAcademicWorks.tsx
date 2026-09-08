@@ -1,5 +1,6 @@
 import { useLibraryStore } from "../../store/useLibraryStore";
 import { GraduationCap, Award, Calendar, User } from "lucide-react";
+import { maskNimWithFaculty } from "../../utils/formatters";
 import type { AcademicWorkDetail } from "../../types";
 
 export function LatestAcademicWorks({ isActive = true }: { isActive?: boolean }) {
@@ -59,7 +60,7 @@ export function LatestAcademicWorks({ isActive = true }: { isActive?: boolean })
                 {work.author}
               </p>
               <p className="text-[11px] text-gray-500 font-medium">
-                {work.faculty}
+                NIM: {maskNimWithFaculty(work.nim, work.faculty)}
               </p>
             </div>
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap shrink-0 ${getBadgeColor(work.type)}`}>

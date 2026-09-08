@@ -114,21 +114,24 @@ export function MembershipStatsCard({ isActive = true }: { isActive?: boolean })
             </div>
             <div className="flex-1 min-h-0 overflow-hidden relative">
               <div 
-                className="absolute top-0 left-0 w-full animate-marquee-vertical"
-                style={{ 
-                  animationDuration: "20s",
-                  animationPlayState: isActive ? "running" : "paused"
-                }}
+                className="absolute top-0 left-0 w-full"
               >
                 <div className="flex flex-col gap-1.5 pr-2 pb-2">
-                  {stats.membership_by_faculty.map((item, i) => 
-                    renderProgressBar(item.faculty, item.count, maxFaculty, "bg-emerald-500", "bg-emerald-100", i)
-                  )}
-                </div>
-                <div className="flex flex-col gap-1.5 pr-2 pb-2">
-                  {stats.membership_by_faculty.map((item, i) => 
-                    renderProgressBar(item.faculty, item.count, maxFaculty, "bg-emerald-500", "bg-emerald-100", i)
-                  )}
+                  {(() => {
+                    const eksakta = stats.membership_by_faculty
+                      .filter(f => ["FAPERTA", "FMIPA", "TEKNIK"].includes(f.faculty))
+                      .reduce((sum, item) => sum + item.count, 0);
+                    const nonEksakta = stats.membership_by_faculty
+                      .filter(f => !["FAPERTA", "FMIPA", "TEKNIK"].includes(f.faculty))
+                      .reduce((sum, item) => sum + item.count, 0);
+                    const totalFac = eksakta + nonEksakta;
+                    return (
+                      <>
+                        {renderProgressBar("Eksakta", eksakta, totalFac, "bg-emerald-500", "bg-emerald-100", 0)}
+                        {renderProgressBar("Non-Eksakta", nonEksakta, totalFac, "bg-emerald-500", "bg-emerald-100", 1)}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             </div>

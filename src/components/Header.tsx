@@ -7,13 +7,18 @@ import { Clock, RefreshCw } from "lucide-react";
 export function Header() {
   const { dateString, timeString } = useRealTimeClock();
   const lastUpdateDisplay = useLibraryStore((s) => s.lastUpdateDisplay);
+  const settings = useLibraryStore((s) => s.settings);
 
   return (
     <header className="w-full px-5 py-2.5 bg-white border-b-2 border-unri-green-100 shadow-sm shrink-0">
       <div className="w-full flex items-center justify-between gap-4">
         {/* LEFT: Logo + Title */}
         <div className="flex items-center gap-3 min-w-0">
-          <UnriLogo size="sm" />
+          {settings?.logoUrl ? (
+            <img src={settings.logoUrl} alt="Logo" className="h-10 object-contain" />
+          ) : (
+            <UnriLogo size="sm" />
+          )}
           <div className="flex flex-col min-w-0">
             <h1 className="text-lg md:text-xl font-extrabold text-unri-green-800 tracking-tight leading-tight whitespace-nowrap">
               PERPUSTAKAAN UNIVERSITAS RIAU

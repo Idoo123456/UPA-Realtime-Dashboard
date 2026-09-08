@@ -21,6 +21,7 @@ export interface AcademicWorkDetail {
   id: string;
   title: string;
   author: string;
+  nim: string;
   type: "ta_d3" | "skripsi_s1" | "tesis_s2" | "disertasi_s3";
   submissionDate: string;
   faculty: string;
