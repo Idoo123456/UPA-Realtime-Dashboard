@@ -23,7 +23,10 @@ export function Footer() {
       <div className="flex-1 overflow-hidden mx-4 bg-gray-50/50 rounded-lg flex items-center gap-3 py-1.5 px-3 border border-gray-100/50">
         <Megaphone className="w-4 h-4 text-unri-yellow-500 shrink-0" />
         <div className="w-full overflow-hidden relative h-5">
-          <div className="absolute whitespace-nowrap animate-scroll-left flex items-center h-full text-sm font-bold text-gray-700 tracking-wide">
+          <div 
+            className="absolute whitespace-nowrap animate-scroll-left flex items-center h-full text-sm font-bold text-gray-700 tracking-wide"
+            style={{ animationDuration: `${settings?.marqueeSpeed || 25}s` }}
+          >
             {settings?.runningText || "Selamat datang di UPA Perpustakaan Universitas Riau."}
           </div>
         </div>

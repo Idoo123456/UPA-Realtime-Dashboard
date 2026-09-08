@@ -198,3 +198,12 @@ body,
 .animate-scroll-left {
   animation: scroll-left 25s linear infinite;
 }
+
+@keyframes emergency-flash {
+  0%, 100% { background-color: #ef4444; border-color: #991b1b; } /* bg-red-500 */
+  50% { background-color: #7f1d1d; border-color: #450a0a; } /* bg-red-900 */
+}
+
+.animate-emergency-flash {
+  animation: emergency-flash 0.7s ease-in-out infinite;
+}

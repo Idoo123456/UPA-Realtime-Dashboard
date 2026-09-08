@@ -12,6 +12,8 @@ export default function Login() {
   const login = useAdminStore((s) => s.login);
   const navigate = useNavigate();
 
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (username === "admin" && password === "admin123") {
@@ -23,11 +25,18 @@ export default function Login() {
   };
 
   const handleSSO = () => {
-    alert("Login SSO UNRI saat ini belum tersedia di lingkungan lokal.");
+    setToastMessage("Login SSO UNRI saat ini belum tersedia di lingkungan lokal.");
+    setTimeout(() => setToastMessage(null), 3000);
   };
 
   return (
     <div className="min-h-screen bg-[#f4f6f8] flex items-center justify-center p-4 sm:p-8 font-sans">
+      {toastMessage && (
+        <div className="fixed top-5 z-50 bg-white border border-gray-200 shadow-xl px-6 py-4 rounded-xl flex items-center gap-3 animate-fade-in-up">
+          <AlertCircle className="w-5 h-5 text-amber-500" />
+          <p className="text-gray-700 font-medium text-sm">{toastMessage}</p>
+        </div>
+      )}
       <div className="flex flex-col md:flex-row bg-white rounded-[2rem] shadow-2xl overflow-hidden max-w-5xl w-full min-h-[600px]">
         
         {/* Left Panel - Dark Background */}

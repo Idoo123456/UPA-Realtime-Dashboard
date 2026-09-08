@@ -20,8 +20,11 @@ export default function AdminConfig() {
   const saveSettings = useLibraryStore((s) => s.saveSettings);
   const resetToSnapshot = useLibraryStore((s) => s.resetToSnapshot);
   const updateStatsManually = useLibraryStore((s) => s.updateStatsManually);
+  const removeLateBook = useLibraryStore((s) => s.removeLateBook);
+  const addLateBook = useLibraryStore((s) => s.addLateBook);
+  const fetchStats = useLibraryStore((s) => s.fetchStats);
 
-  const [activeTab, setActiveTab] = useState<"overview" | "display" | "data">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "display" | "data" | "circulation">("overview");
 
   // Display Settings States
   const [activeBranch, setActiveBranch] = useState<Settings["activeBranch"]>(settings.activeBranch);
@@ -29,6 +32,7 @@ export default function AdminConfig() {
   const [showPopups, setShowPopups] = useState(settings.showPopups);
   const [logoPreview, setLogoPreview] = useState<string | null>(settings.logoUrl);
   const [runningText, setRunningText] = useState(settings.runningText || "");
+  const [marqueeSpeed, setMarqueeSpeed] = useState(settings.marqueeSpeed || 25);
   const [operationalHours, setOperationalHours] = useState(settings.operationalHours || "");
   const [emergencyAlert, setEmergencyAlert] = useState(settings.emergencyAlert || "");
   const [isSaving, setIsSaving] = useState(false);
@@ -37,16 +41,37 @@ export default function AdminConfig() {
   const [manualVisitors, setManualVisitors] = useState(stats.total_visitors_today);
   const [manualBorrowing, setManualBorrowing] = useState(stats.borrowing_today);
 
+  // Circulation Search & Add State
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newLateBook, setNewLateBook] = useState({
+    memberName: "", nim: "", faculty: "TEKNIK", title: "", daysLate: 1, fine: 10000
+  });
+
   // Popup States
-  const [showLoginSuccess, setShowLoginSuccess] = useState(false);
+  const [toastMessage, setToastMessage] = useState<{title: string, message: string, type: "success" | "info"} | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  
+  const showToast = (title: string, message: string, type: "success" | "info" = "success") => {
+    setToastMessage({ title, message, type });
+    setTimeout(() => setToastMessage(null), 3500);
+  };
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchSettings();
-  }, [fetchSettings]);
+    fetchStats();
+    
+    // Poll stats periodically to ensure perfect sync across different browsers/devices
+    const interval = setInterval(() => {
+      fetchStats();
+      fetchSettings();
+    }, 2500);
+    
+    return () => clearInterval(interval);
+  }, [fetchSettings, fetchStats]);
 
   useEffect(() => {
     setActiveBranch(settings.activeBranch);
@@ -54,14 +79,10 @@ export default function AdminConfig() {
     setShowPopups(settings.showPopups);
     setLogoPreview(settings.logoUrl);
     setRunningText(settings.runningText || "");
+    setMarqueeSpeed(settings.marqueeSpeed || 25);
     setOperationalHours(settings.operationalHours || "");
     setEmergencyAlert(settings.emergencyAlert || "");
   }, [settings]);
-
-  useEffect(() => {
-    setManualVisitors(stats.total_visitors_today);
-    setManualBorrowing(stats.borrowing_today);
-  }, [stats.total_visitors_today, stats.borrowing_today]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -71,10 +92,8 @@ export default function AdminConfig() {
 
   useEffect(() => {
     if (location.state?.loginSuccess) {
-      setShowLoginSuccess(true);
+      showToast("Login Berhasil!", "Selamat datang di Sistem CMS Admin UPA.");
       window.history.replaceState({}, document.title);
-      const timer = setTimeout(() => setShowLoginSuccess(false), 3000);
-      return () => clearTimeout(timer);
     }
   }, [location]);
 
@@ -86,11 +105,12 @@ export default function AdminConfig() {
       showPopups,
       logoUrl: logoPreview,
       runningText,
+      marqueeSpeed: Number(marqueeSpeed),
       operationalHours,
       emergencyAlert: emergencyAlert.trim() === "" ? null : emergencyAlert,
     });
     setIsSaving(false);
-    alert("Pengaturan layar berhasil disinkronkan ke TV!");
+    showToast("Berhasil Disimpan", "Pengaturan layar berhasil disinkronkan ke TV!");
   };
 
   const handleUpdateData = () => {
@@ -98,7 +118,23 @@ export default function AdminConfig() {
       total_visitors_today: Number(manualVisitors),
       borrowing_today: Number(manualBorrowing)
     });
-    alert("Data simulasi berhasil di-override manual!");
+    showToast("Data Diperbarui", "Data simulasi berhasil di-override manual!", "info");
+  };
+
+  const handleAddLateBook = (e: React.FormEvent) => {
+    e.preventDefault();
+    addLateBook({
+      memberName: newLateBook.memberName,
+      nim: newLateBook.nim,
+      faculty: newLateBook.faculty,
+      title: newLateBook.title,
+      daysLate: Number(newLateBook.daysLate),
+      fine: Number(newLateBook.fine),
+      photo: undefined
+    });
+    setNewLateBook({ memberName: "", nim: "", faculty: "TEKNIK", title: "", daysLate: 1, fine: 10000 });
+    setShowAddForm(false);
+    showToast("Data Ditambahkan", `Data denda untuk ${newLateBook.memberName} berhasil masuk sistem.`);
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -118,23 +154,29 @@ export default function AdminConfig() {
   const handleResetData = () => {
     resetToSnapshot();
     setShowResetConfirm(false);
-    alert("Semua data statistik berhasil dikembalikan ke keadaan awal (snapshot).");
+    showToast("Sistem Direset", "Semua data statistik telah dikembalikan ke kondisi awal.");
   };
 
   if (!isAuthenticated) return null;
 
   return (
     <div className="h-screen bg-gray-50 flex overflow-hidden">
-      {/* Login Success Notification */}
-      {showLoginSuccess && (
-        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 animate-bounce-in">
-          <div className="bg-white border-l-4 border-unri-green-500 shadow-xl rounded-xl px-6 py-4 flex items-center gap-4 min-w-[320px]">
-            <CheckCircle className="w-8 h-8 text-unri-green-500" />
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 animate-bounce-in">
+          <div className={`bg-white border-l-4 shadow-xl rounded-xl px-6 py-4 flex items-center gap-4 min-w-[320px] ${
+            toastMessage.type === 'success' ? 'border-unri-green-500' : 'border-blue-500'
+          }`}>
+            {toastMessage.type === 'success' ? (
+              <CheckCircle className="w-8 h-8 text-unri-green-500" />
+            ) : (
+              <Database className="w-8 h-8 text-blue-500" />
+            )}
             <div className="flex-1">
-              <h3 className="font-bold text-gray-900">Login Berhasil!</h3>
-              <p className="text-sm text-gray-500">Selamat datang di Sistem CMS Admin UPA.</p>
+              <h3 className="font-bold text-gray-900">{toastMessage.title}</h3>
+              <p className="text-sm text-gray-500">{toastMessage.message}</p>
             </div>
-            <button onClick={() => setShowLoginSuccess(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
+            <button onClick={() => setToastMessage(null)} className="text-gray-400 hover:text-gray-600 transition-colors">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -208,6 +250,12 @@ export default function AdminConfig() {
           >
             <FileEdit className="w-5 h-5" /> Manajemen Data
           </button>
+          <button
+            onClick={() => setActiveTab("circulation")}
+            className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl font-bold transition-all ${activeTab === "circulation" ? "bg-unri-green-800 text-white shadow-inner" : "text-unri-green-100 hover:bg-white/5"}`}
+          >
+            <BookDown className="w-5 h-5" /> Sirkulasi & Denda
+          </button>
         </nav>
 
         <div className="p-4 border-t border-white/10">
@@ -233,6 +281,7 @@ export default function AdminConfig() {
             {activeTab === "overview" && "Ringkasan Aktivitas Perpustakaan"}
             {activeTab === "display" && "Konfigurasi Penayangan TV"}
             {activeTab === "data" && "Manajemen Override Data Statistik"}
+            {activeTab === "circulation" && "Sirkulasi & Daftar Denda Mahasiswa"}
           </h2>
           <div className="flex items-center gap-3 px-4 py-2 bg-unri-green-50 rounded-full border border-unri-green-200">
             <span className="w-2.5 h-2.5 bg-unri-green-500 rounded-full animate-pulse"></span>
@@ -306,7 +355,7 @@ export default function AdminConfig() {
                     </div>
                     <div>
                       <label className="block text-sm font-bold text-gray-700 mb-3">Durasi Slide (Detik)</label>
-                      <input type="number" min="5" max="120" value={slideDuration} onChange={(e) => setSlideDuration(Number(e.target.value))} className="w-32 rounded-xl border-gray-300 focus:border-unri-green-500 focus:ring-2 focus:ring-unri-green-500/20 font-bold p-3 text-center" />
+                      <input type="number" min="5" max="120" value={slideDuration} onChange={(e) => setSlideDuration(Number(e.target.value))} className="w-32 rounded-xl border border-gray-300 bg-gray-50 shadow-sm focus:bg-white focus:border-unri-green-500 focus:ring-2 focus:ring-unri-green-500/20 font-bold p-3 text-center transition-colors" />
                     </div>
                   </div>
                 </section>
@@ -316,11 +365,18 @@ export default function AdminConfig() {
                   <div className="space-y-6">
                     <div>
                       <label className="block text-sm font-bold text-gray-700 mb-2">Teks Pengumuman Berjalan (Marquee)</label>
-                      <textarea value={runningText} onChange={(e) => setRunningText(e.target.value)} rows={2} className="w-full rounded-xl border-gray-300 focus:border-unri-green-500 focus:ring-2 focus:ring-unri-green-500/20 font-medium p-3 resize-none" placeholder="Masukkan pengumuman..." />
+                      <textarea value={runningText} onChange={(e) => setRunningText(e.target.value)} rows={2} className="w-full rounded-xl border border-gray-300 bg-gray-50 shadow-sm focus:bg-white focus:border-unri-green-500 focus:ring-2 focus:ring-unri-green-500/20 font-medium p-3 resize-none transition-colors" placeholder="Masukkan pengumuman..." />
                     </div>
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2">Jam Operasional Layanan</label>
-                      <input type="text" value={operationalHours} onChange={(e) => setOperationalHours(e.target.value)} className="w-full md:w-1/2 rounded-xl border-gray-300 focus:border-unri-green-500 focus:ring-2 focus:ring-unri-green-500/20 font-medium p-3" placeholder="Senin - Jumat | 08:00 - 16:00 WIB" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-2">Jam Operasional Layanan</label>
+                        <input type="text" value={operationalHours} onChange={(e) => setOperationalHours(e.target.value)} className="w-full rounded-xl border border-gray-300 bg-gray-50 shadow-sm focus:bg-white focus:border-unri-green-500 focus:ring-2 focus:ring-unri-green-500/20 font-medium p-3 transition-colors" placeholder="Senin - Jumat | 08:00 - 16:00 WIB" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-2">Kecepatan Teks Berjalan (Detik)</label>
+                        <input type="number" min="5" max="100" value={marqueeSpeed} onChange={(e) => setMarqueeSpeed(Number(e.target.value))} className="w-full rounded-xl border border-gray-300 bg-gray-50 shadow-sm focus:bg-white focus:border-unri-green-500 focus:ring-2 focus:ring-unri-green-500/20 font-bold p-3 transition-colors" />
+                        <p className="text-xs text-gray-500 mt-1">Makin kecil = makin cepat (Standar: 25).</p>
+                      </div>
                     </div>
                   </div>
                 </section>
@@ -329,7 +385,7 @@ export default function AdminConfig() {
                   <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2"></div>
                   <h3 className="text-lg font-bold text-red-800 mb-2 flex items-center gap-2"><BellRing className="w-5 h-5 text-red-600"/> Peringatan Darurat TV (Emergency Alert)</h3>
                   <p className="text-sm text-red-600/80 mb-4 font-medium max-w-2xl">Jika diisi, akan memunculkan banner merah raksasa secara paksa di seluruh layar TV perpustakaan. Kosongkan untuk menonaktifkan.</p>
-                  <input type="text" value={emergencyAlert} onChange={(e) => setEmergencyAlert(e.target.value)} className="w-full rounded-xl border-red-300 bg-white focus:border-red-500 focus:ring-2 focus:ring-red-500/20 font-bold text-red-700 p-4 shadow-inner" placeholder="Cth: PERPUSTAKAAN AKAN TUTUP DALAM 15 MENIT. HARAP SEGERA..." />
+                  <input type="text" value={emergencyAlert} onChange={(e) => setEmergencyAlert(e.target.value)} className="w-full rounded-xl border border-red-300 bg-white focus:border-red-500 focus:ring-2 focus:ring-red-500/20 font-bold text-red-700 p-4 shadow-inner transition-colors" placeholder="Cth: PERPUSTAKAAN AKAN TUTUP DALAM 15 MENIT. HARAP SEGERA..." />
                 </section>
 
                 <div className="flex justify-end pt-4">
@@ -350,11 +406,13 @@ export default function AdminConfig() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                     <div>
                       <label className="block text-sm font-bold text-gray-700 mb-2">Total Kunjungan Hari Ini</label>
-                      <input type="number" value={manualVisitors} onChange={(e) => setManualVisitors(Number(e.target.value))} className="w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 font-bold p-3 text-lg" />
+                      <input type="number" value={manualVisitors} onChange={(e) => setManualVisitors(Number(e.target.value))} className="w-full rounded-xl border border-gray-300 bg-gray-50 shadow-sm focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 font-bold p-3 text-lg transition-colors" />
+                      <p className="text-sm text-gray-500 mt-2 font-medium">Angka riil di layar TV saat ini: <strong className="text-blue-600">{stats.total_visitors_today}</strong></p>
                     </div>
                     <div>
                       <label className="block text-sm font-bold text-gray-700 mb-2">Total Peminjaman Hari Ini</label>
-                      <input type="number" value={manualBorrowing} onChange={(e) => setManualBorrowing(Number(e.target.value))} className="w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 font-bold p-3 text-lg" />
+                      <input type="number" value={manualBorrowing} onChange={(e) => setManualBorrowing(Number(e.target.value))} className="w-full rounded-xl border border-gray-300 bg-gray-50 shadow-sm focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 font-bold p-3 text-lg transition-colors" />
+                      <p className="text-sm text-gray-500 mt-2 font-medium">Angka riil di layar TV saat ini: <strong className="text-blue-600">{stats.borrowing_today}</strong></p>
                     </div>
                   </div>
                   
@@ -373,6 +431,180 @@ export default function AdminConfig() {
                   <button onClick={() => setShowResetConfirm(true)} className="shrink-0 px-6 py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-md transition-colors flex items-center gap-3 text-lg">
                     <RotateCcw className="w-5 h-5" /> Reset Semua Data
                   </button>
+                </section>
+              </div>
+            )}
+
+            {/* TAB: CIRCULATION */}
+            {activeTab === "circulation" && (
+              <div className="space-y-6 animate-fade-scale">
+                
+                {/* Add Late Book Form Section */}
+                <section className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                      <BookDown className="w-6 h-6 text-unri-green-600"/> Tambah Tagihan Denda Mahasiswa
+                    </h3>
+                    <button 
+                      onClick={() => setShowAddForm(!showAddForm)}
+                      className="px-4 py-2 bg-unri-green-50 text-unri-green-700 font-bold rounded-xl border border-unri-green-200 hover:bg-unri-green-100 transition-colors text-sm"
+                    >
+                      {showAddForm ? "Batal Menambahkan" : "+ Tambah Data Baru"}
+                    </button>
+                  </div>
+
+                  {showAddForm && (
+                    <form onSubmit={handleAddLateBook} className="bg-gray-50 p-6 rounded-xl border border-gray-200 animate-fade-scale mb-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                          <label className="block text-sm font-bold text-gray-700 mb-2">Nama Lengkap</label>
+                          <input required type="text" value={newLateBook.memberName} onChange={(e) => setNewLateBook({...newLateBook, memberName: e.target.value})} className="w-full rounded-xl border border-gray-300 bg-white p-3 focus:ring-2 focus:ring-unri-green-500/20 focus:border-unri-green-500" placeholder="Cth: Budi Santoso" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">NIM</label>
+                            <input required type="text" value={newLateBook.nim} onChange={(e) => setNewLateBook({...newLateBook, nim: e.target.value})} className="w-full rounded-xl border border-gray-300 bg-white p-3 focus:ring-2 focus:ring-unri-green-500/20 focus:border-unri-green-500" placeholder="Cth: 2110..." />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">Fakultas</label>
+                            <select value={newLateBook.faculty} onChange={(e) => setNewLateBook({...newLateBook, faculty: e.target.value})} className="w-full rounded-xl border border-gray-300 bg-white p-3 focus:ring-2 focus:ring-unri-green-500/20 focus:border-unri-green-500">
+                              {["FAPERTA", "FMIPA", "FE", "TEKNIK", "FISIP", "HUKUM", "FKIP", "KEDOKTERAN"].map(f => <option key={f} value={f}>{f}</option>)}
+                            </select>
+                          </div>
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-bold text-gray-700 mb-2">Judul Buku</label>
+                          <input required type="text" value={newLateBook.title} onChange={(e) => setNewLateBook({...newLateBook, title: e.target.value})} className="w-full rounded-xl border border-gray-300 bg-white p-3 focus:ring-2 focus:ring-unri-green-500/20 focus:border-unri-green-500" placeholder="Cth: Algoritma dan Struktur Data" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-bold text-gray-700 mb-2">Terlambat (Hari)</label>
+                          <input required type="number" min="1" value={newLateBook.daysLate} onChange={(e) => setNewLateBook({...newLateBook, daysLate: Number(e.target.value)})} className="w-full rounded-xl border border-gray-300 bg-white p-3 focus:ring-2 focus:ring-unri-green-500/20 focus:border-unri-green-500" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-bold text-gray-700 mb-2">Nominal Denda (Rp)</label>
+                          <input required type="number" min="0" value={newLateBook.fine} onChange={(e) => setNewLateBook({...newLateBook, fine: Number(e.target.value)})} className="w-full rounded-xl border border-gray-300 bg-white p-3 focus:ring-2 focus:ring-unri-green-500/20 focus:border-unri-green-500" />
+                        </div>
+                      </div>
+                      <div className="flex justify-end">
+                        <button type="submit" className="px-6 py-3 bg-unri-green-600 hover:bg-unri-green-700 text-white font-bold rounded-xl shadow-md transition-colors flex items-center gap-2">
+                          Simpan Data Denda
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </section>
+
+                <section className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                    <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                      <AlertTriangle className="w-6 h-6 text-red-500"/> Daftar Keterlambatan Pengembalian Buku
+                    </h3>
+                    <div className="flex items-center gap-3">
+                      <div className="relative">
+                        <input 
+                          type="text" 
+                          placeholder="Cari Nama atau NIM..." 
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="w-full md:w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-unri-green-500/20 focus:border-unri-green-500 transition-colors text-sm font-medium"
+                        />
+                        <svg className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                      </div>
+                      <div className="px-4 py-2 bg-red-50 text-red-700 rounded-full font-bold text-sm border border-red-200 shrink-0">
+                        Total Tunggakan: {stats.late_books?.length || 0}
+                      </div>
+                    </div>
+                  </div>
+
+                  {(() => {
+                    const filteredBooks = (stats.late_books || []).filter((book: any) => 
+                      book.memberName.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                      book.nim.toLowerCase().includes(searchQuery.toLowerCase())
+                    );
+
+                    if (!stats.late_books || stats.late_books.length === 0) {
+                      return (
+                        <div className="text-center py-16 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                          <CheckCircle className="w-12 h-12 text-unri-green-500 mx-auto mb-3" />
+                          <h4 className="text-lg font-bold text-gray-700">Tidak ada keterlambatan saat ini</h4>
+                          <p className="text-gray-500">Semua buku telah dikembalikan tepat waktu.</p>
+                        </div>
+                      );
+                    }
+
+                    if (filteredBooks.length === 0) {
+                      return (
+                        <div className="text-center py-16 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                          <h4 className="text-lg font-bold text-gray-700 mb-2">Pencarian Tidak Ditemukan</h4>
+                          <p className="text-gray-500">Tidak ada mahasiswa dengan nama atau NIM "{searchQuery}".</p>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="bg-gray-50 border-y border-gray-200 text-gray-500 text-sm">
+                              <th className="px-4 py-3 font-bold">Data Mahasiswa</th>
+                              <th className="px-4 py-3 font-bold">Judul Buku</th>
+                              <th className="px-4 py-3 font-bold text-center">Terlambat (Hari)</th>
+                              <th className="px-4 py-3 font-bold text-right">Nominal Denda</th>
+                              <th className="px-4 py-3 font-bold text-center w-32">Aksi</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100">
+                            {filteredBooks.map((book: any) => (
+                            <tr key={book.id} className="hover:bg-red-50/50 transition-colors">
+                              <td className="px-4 py-4">
+                                <div className="flex items-center gap-3">
+                                  {book.photo ? (
+                                    <img src={book.photo} alt={book.memberName} className="w-10 h-10 rounded-full object-cover shadow-sm" />
+                                  ) : (
+                                    <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 font-bold">
+                                      {book.memberName.charAt(0)}
+                                    </div>
+                                  )}
+                                  <div>
+                                    <p className="font-bold text-gray-900">{book.memberName}</p>
+                                    <p className="text-xs font-semibold text-gray-500">{book.nim} • {book.faculty}</p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-4 py-4 text-sm font-semibold text-gray-700">
+                                {book.title}
+                              </td>
+                              <td className="px-4 py-4 text-center">
+                                <span className="inline-flex items-center gap-1 bg-orange-100 text-orange-700 px-2.5 py-1 rounded-md text-xs font-black">
+                                  {book.daysLate} Hari
+                                </span>
+                              </td>
+                              <td className="px-4 py-4 text-right">
+                                <span className="text-red-600 font-black text-sm">
+                                  Rp {book.fine.toLocaleString('id-ID')}
+                                </span>
+                              </td>
+                              <td className="px-4 py-4 text-center">
+                                <button
+                                  onClick={() => {
+                                    removeLateBook(book.id);
+                                    showToast("Denda Lunas", `Mahasiswa ${book.memberName} telah menyelesaikan pembayaran denda.`, "success");
+                                  }}
+                                  className="px-3 py-1.5 bg-unri-green-50 text-unri-green-700 hover:bg-unri-green-600 hover:text-white font-bold text-xs rounded-lg transition-colors"
+                                  title="Tandai Sudah Bayar / Lunas"
+                                >
+                                  Selesaikan
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })()}
                 </section>
               </div>
             )}

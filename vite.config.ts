@@ -33,6 +33,31 @@ function settingsApiPlugin() {
           });
         }
       });
+
+      server.middlewares.use('/api/stats', (req: any, res: any) => {
+        const dbPath = path.resolve(process.cwd(), 'stats.json');
+
+        if (req.method === 'GET') {
+          if (fs.existsSync(dbPath)) {
+            const data = fs.readFileSync(dbPath, 'utf-8');
+            res.setHeader('Content-Type', 'application/json');
+            res.end(data);
+          } else {
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(null));
+          }
+        } else if (req.method === 'POST') {
+          let body = '';
+          req.on('data', (chunk: any) => {
+            body += chunk.toString();
+          });
+          req.on('end', () => {
+            fs.writeFileSync(dbPath, body);
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ success: true }));
+          });
+        }
+      });
     }
   };
 }

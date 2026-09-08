@@ -2,6 +2,8 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { LibraryStats, LateBook } from "../types";
 
+const syncChannel = new BroadcastChannel('library_sync_channel');
+
 const INITIAL_HOURLY_VISITORS = [15, 35, 48, 42, 20, 40, 30, 22, 18];
 const INITIAL_HOURLY_BORROWING = [8, 18, 25, 20, 10, 18, 15, 12, 10];
 const INITIAL_HOURLY_RETURNING = [10, 22, 28, 22, 12, 20, 16, 14, 12];
@@ -67,9 +69,10 @@ function generateLateBook(id: string): LateBook {
 export type Settings = {
   activeBranch: "Pusat" | "Cabang A" | "Cabang B";
   slideDuration: number;
-  logoUrl: string | null;
   showPopups: boolean;
+  logoUrl: string | null;
   runningText: string;
+  marqueeSpeed: number;
   operationalHours: string;
   emergencyAlert: string | null;
 };
@@ -191,11 +194,15 @@ interface LibraryStore {
   updateSettings: (newSettings: Partial<Settings>) => void;
   fetchSettings: () => Promise<void>;
   saveSettings: (newSettings: Settings) => Promise<void>;
+  fetchStats: () => Promise<void>;
+  saveStats: (newStats: any) => Promise<void>;
   refreshTimestamp: () => void;
   startAutoRefresh: () => () => void;
   resetToSnapshot: () => void;
   clearPopup: () => void;
   updateStatsManually: (updates: any) => void;
+  removeLateBook: (id: string) => void;
+  addLateBook: (book: Omit<LateBook, 'id'>) => void;
 }
 
 const getSavedStats = () => {
@@ -218,9 +225,10 @@ export const useLibraryStore = create<LibraryStore>()(
     settings: {
       activeBranch: "Pusat",
       slideDuration: 25000,
+      showPopups: true,
       logoUrl: null,
-      showPopups: false,
       runningText: "Selamat datang di UPA Perpustakaan Universitas Riau. Harap menjaga ketenangan dan kebersihan selama berada di ruang baca.",
+      marqueeSpeed: 25,
       operationalHours: "Senin - Jumat | 08:00 - 16:00 WIB",
       emergencyAlert: null,
     },
@@ -241,7 +249,34 @@ export const useLibraryStore = create<LibraryStore>()(
           ...state.stats,
           ...updates,
         };
-        localStorage.setItem("upa_stats", JSON.stringify(newStats));
+        get().saveStats(newStats);
+        return { stats: newStats };
+      });
+    },
+
+    removeLateBook: (id) => {
+      set((state) => {
+        const newLateBooks = state.stats.late_books.filter((b: any) => b.id !== id);
+        const newStats = {
+          ...state.stats,
+          late_books: newLateBooks,
+          overdue_books: newLateBooks.length,
+        };
+        get().saveStats(newStats);
+        return { stats: newStats };
+      });
+    },
+
+    addLateBook: (book) => {
+      set((state) => {
+        const newBook: LateBook = { ...book, id: `manual-${Date.now()}` };
+        const newLateBooks = [newBook, ...(state.stats.late_books || [])];
+        const newStats = {
+          ...state.stats,
+          late_books: newLateBooks,
+          overdue_books: newLateBooks.length,
+        };
+        get().saveStats(newStats);
         return { stats: newStats };
       });
     },
@@ -270,6 +305,37 @@ export const useLibraryStore = create<LibraryStore>()(
         });
       } catch (e) {
         console.error('Failed to save settings', e);
+      }
+    },
+
+    fetchStats: async () => {
+      try {
+        const res = await fetch('/api/stats');
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Object.keys(data).length > 0) {
+            set({ stats: data });
+            localStorage.setItem("upa_stats", JSON.stringify(data));
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch stats', e);
+      }
+    },
+
+    saveStats: async (newStats) => {
+      localStorage.setItem("upa_stats", JSON.stringify(newStats));
+      // Broadcast to other tabs instantly
+      syncChannel.postMessage({ type: 'SYNC_STATS', payload: newStats });
+      
+      try {
+        await fetch('/api/stats', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newStats),
+        });
+      } catch (e) {
+        console.error('Failed to save stats API', e);
       }
     },
 
@@ -383,6 +449,7 @@ export const useLibraryStore = create<LibraryStore>()(
           else s.disertasi_s3 += 1;
         }
 
+        // Simulating collection additions
         if (Math.random() < 0.2) {
           const classes = [
             "Kelas 000", "Kelas 100", "Kelas 200", "Kelas 300", "Kelas 400",
@@ -404,23 +471,6 @@ export const useLibraryStore = create<LibraryStore>()(
           );
         }
 
-        if (Math.random() < 0.12) {
-          const delta = Math.random() < 0.5 ? 1 : -1;
-          s.overdue_books = Math.max(50, s.overdue_books + delta);
-        }
-
-        if (s.late_books.length !== s.overdue_books) {
-          let newBooks = [...s.late_books];
-          if (newBooks.length < s.overdue_books) {
-            while (newBooks.length < s.overdue_books) {
-              newBooks.push(generateLateBook(`gen-${Date.now()}-${newBooks.length}`));
-            }
-          } else {
-            newBooks = newBooks.slice(0, s.overdue_books);
-          }
-          s.late_books = newBooks;
-        }
-
         s.last_updated = ts.toISOString();
         s.system_status = "online";
         
@@ -438,8 +488,7 @@ export const useLibraryStore = create<LibraryStore>()(
           newPopup = { id: Date.now().toString(), message: chosen.message, type: chosen.type as any };
         }
 
-        // Simpan ke localStorage untuk sinkronisasi cross-tab
-        localStorage.setItem("upa_stats", JSON.stringify(s));
+        get().saveStats(s);
 
         return {
           lastUpdateDisplay: timeStr,
@@ -451,7 +500,7 @@ export const useLibraryStore = create<LibraryStore>()(
 
     resetToSnapshot: () => {
       const freshStats = JSON.parse(JSON.stringify(INITIAL_STATS));
-      localStorage.setItem("upa_stats", JSON.stringify(freshStats));
+      get().saveStats(freshStats);
       set({
         stats: freshStats,
       });
@@ -461,6 +510,8 @@ export const useLibraryStore = create<LibraryStore>()(
       const id = window.setInterval(() => {
         get().refreshTimestamp();
         get().fetchSettings();
+        // TV screen also periodically syncs just in case storage event misses
+        get().fetchStats();
       }, 2500);
       return () => window.clearInterval(id);
     },
@@ -468,6 +519,7 @@ export const useLibraryStore = create<LibraryStore>()(
 );
 
 if (typeof window !== "undefined") {
+  // Fallback storage listener
   window.addEventListener("storage", (e) => {
     if (e.key === "upa_stats" && e.newValue) {
       try {
@@ -477,4 +529,11 @@ if (typeof window !== "undefined") {
       }
     }
   });
+
+  // Instant BroadcastChannel listener
+  syncChannel.onmessage = (event) => {
+    if (event.data?.type === 'SYNC_STATS' && event.data?.payload) {
+      useLibraryStore.setState({ stats: event.data.payload });
+    }
+  };
 }

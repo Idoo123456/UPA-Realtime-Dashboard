@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 import Home from "@/pages/Home";
 import CollectionPage from "@/pages/CollectionPage";
 import MembershipPage from "@/pages/MembershipPage";
@@ -8,6 +8,20 @@ import AdminConfig from "@/pages/AdminConfig";
 
 import { PopupNotification } from "@/components/PopupNotification";
 import { EmergencyAlert } from "@/components/EmergencyAlert";
+
+function GlobalOverlays() {
+  const location = useLocation();
+  const isHidden = location.pathname.startsWith('/admin') || location.pathname.startsWith('/login');
+  
+  if (isHidden) return null;
+
+  return (
+    <>
+      <EmergencyAlert />
+      <PopupNotification />
+    </>
+  );
+}
 
 export default function App() {
   return (
@@ -20,8 +34,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/admin" element={<AdminConfig />} />
       </Routes>
-      <EmergencyAlert />
-      <PopupNotification />
+      <GlobalOverlays />
     </Router>
   );
 }
