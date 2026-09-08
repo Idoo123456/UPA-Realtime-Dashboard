@@ -12,7 +12,7 @@ export function formatNumberDecimal(n: number, digits = 1): string {
 }
 
 export function maskNimWithFaculty(nim: string, faculty: string): string {
-  if (!nim) return `${faculty} - ***`;
-  const last3 = nim.slice(-3);
-  return `${faculty} - ***${last3}`;
+  if (!nim || nim.length <= 3) return `${faculty} - ***`;
+  const visiblePart = nim.slice(0, -3);
+  return `${faculty} - ${visiblePart}***`;
 }

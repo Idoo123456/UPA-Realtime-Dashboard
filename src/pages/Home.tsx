@@ -104,14 +104,17 @@ export default function Home() {
             {isPusat ? (
               // Pusat View
               <>
-                <div className="col-start-1 row-start-1 row-span-2 min-h-0 overflow-hidden flex flex-col">
+                <div className="col-start-1 row-start-1 min-h-0 overflow-hidden flex flex-col">
                   <VisitorsCard />
+                </div>
+                <div className="col-start-1 row-start-2 min-h-0 overflow-hidden flex flex-col">
+                  <TransactionInfoCard />
                 </div>
                 <div className="col-start-2 row-start-1 row-span-2 min-h-0 overflow-hidden flex flex-col">
                   <MembershipStatsCard isActive={currentSlide === 1} />
                 </div>
                 <div className="col-start-3 row-start-1 row-span-2 min-h-0 overflow-hidden flex flex-col">
-                  <TransactionInfoCard />
+                  <LateBooksList isActive={currentSlide === 1} />
                 </div>
               </>
             ) : (
