@@ -113,7 +113,10 @@ export default function Home() {
                 <div className="col-start-2 row-start-1 row-span-2 min-h-0 overflow-hidden flex flex-col">
                   <MembershipStatsCard isActive={currentSlide === 1} />
                 </div>
-                <div className="col-start-3 row-start-1 row-span-2 min-h-0 overflow-hidden flex flex-col">
+                <div className="col-start-3 row-start-1 min-h-0 overflow-hidden flex flex-col">
+                  <AdminTransactionsCard />
+                </div>
+                <div className="col-start-3 row-start-2 min-h-0 overflow-hidden flex flex-col">
                   <LateBooksList isActive={currentSlide === 1} />
                 </div>
               </>
