@@ -15,7 +15,7 @@ export function EmergencyAlert() {
       return;
     }
 
-    // Play siren sound using Web Audio API
+    // Play siren sound using Web Audio API (Synthesized Siren)
     const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
     if (!AudioContext) return;
 

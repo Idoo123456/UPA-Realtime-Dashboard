@@ -283,7 +283,7 @@ export const useLibraryStore = create<LibraryStore>()(
 
     fetchSettings: async () => {
       try {
-        const res = await fetch('/api/settings');
+        const res = await fetch('/api/settings?t=' + Date.now(), { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           if (Object.keys(data).length > 0) {
@@ -297,6 +297,9 @@ export const useLibraryStore = create<LibraryStore>()(
 
     saveSettings: async (newSettings) => {
       set({ settings: newSettings });
+      // Broadcast to other tabs instantly
+      syncChannel.postMessage({ type: 'SYNC_SETTINGS', payload: newSettings });
+
       try {
         await fetch('/api/settings', {
           method: 'POST',
@@ -534,6 +537,9 @@ if (typeof window !== "undefined") {
   syncChannel.onmessage = (event) => {
     if (event.data?.type === 'SYNC_STATS' && event.data?.payload) {
       useLibraryStore.setState({ stats: event.data.payload });
+    }
+    if (event.data?.type === 'SYNC_SETTINGS' && event.data?.payload) {
+      useLibraryStore.setState({ settings: event.data.payload });
     }
   };
 }
