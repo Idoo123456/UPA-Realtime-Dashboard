@@ -1,8 +1,69 @@
+import { useEffect, useRef } from "react";
 import { useLibraryStore } from "../store/useLibraryStore";
 import { AlertTriangle } from "lucide-react";
 
 export function EmergencyAlert() {
   const emergencyAlert = useLibraryStore((s) => s.settings.emergencyAlert);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  useEffect(() => {
+    if (!emergencyAlert) {
+      if (audioCtxRef.current) {
+        audioCtxRef.current.close();
+        audioCtxRef.current = null;
+      }
+      return;
+    }
+
+    // Play siren sound using Web Audio API
+    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContext) return;
+
+    const ctx = new AudioContext();
+    audioCtxRef.current = ctx;
+
+    const playSiren = () => {
+      if (ctx.state === 'closed') return;
+      
+      const osc = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+
+      osc.connect(gainNode);
+      gainNode.connect(ctx.destination);
+
+      osc.type = "square";
+      const now = ctx.currentTime;
+
+      // Siren frequency sweep (wailing sound)
+      osc.frequency.setValueAtTime(600, now);
+      osc.frequency.linearRampToValueAtTime(1200, now + 0.5);
+      osc.frequency.linearRampToValueAtTime(600, now + 1.0);
+
+      // Volume control
+      gainNode.gain.setValueAtTime(0, now);
+      gainNode.gain.linearRampToValueAtTime(0.1, now + 0.1);
+      gainNode.gain.linearRampToValueAtTime(0.1, now + 0.9);
+      gainNode.gain.linearRampToValueAtTime(0, now + 1.0);
+
+      osc.start(now);
+      osc.stop(now + 1.0);
+
+      // Repeat the siren loop
+      setTimeout(() => {
+        if (ctx.state !== 'closed') {
+          playSiren();
+        }
+      }, 1000);
+    };
+
+    playSiren();
+
+    return () => {
+      if (ctx.state !== 'closed') {
+        ctx.close();
+      }
+    };
+  }, [emergencyAlert]);
 
   if (!emergencyAlert) return null;
 

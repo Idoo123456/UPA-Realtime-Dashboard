@@ -67,7 +67,7 @@ export default function AdminConfig() {
     // Poll stats periodically to ensure perfect sync across different browsers/devices
     const interval = setInterval(() => {
       fetchStats();
-      fetchSettings();
+      // fetchSettings() dipanggil sekali saja agar tidak mereset input form saat admin sedang mengetik
     }, 2500);
     
     return () => clearInterval(interval);
